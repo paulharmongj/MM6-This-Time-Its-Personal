@@ -54,20 +54,25 @@ rownames(gtemp) <- gtemp[,1]
 colnames(gtemp) <- c("Year", month.abb, "Annual")
 
 ## Plot the data
+library(grDevices)
 ylab <- expression(Temperature~Anomaly~(1961-1990)~degree*C)
-plot(Annual ~ Year, data = gtemp, type = "o",pch = 20, cex = 1.4,col = c("dodgerblue"), ylab = ylab, xaxt = "n")
+plot(Annual ~ Year, data = gtemp, type = "o",pch = 20, cex = 1.4,col = rgb(30,144,255,alpha = 150,maxColorValue = 260), ylab = ylab, xaxt = "n")
 abline(h=0,col="orange2",lwd=3, lty = 2)
 title("Temperature Anomaly since 1850")
 axis(1,at = seq(1850,2010, by = 25))
 
-require(mgcv)
+library(mgcv)
 m1<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,method="GCV.Cp")
 
 summary(m1)
-lines(gtemp$Year,fitted(m1),col="magenta",lwd=2)
+lines(gtemp$Year,fitted(m1),col="blue4",lwd=2)
 ```
 
 5) __Using the following code, you can obtain the estimated first derivative of the time trend. Smoothing with GCV and autocorrelated data can lead to overly aggressive fits. One option (now the default in `gam`) is to use "REML" estimation to get the optimal amount of smoothness. This approach exploits a connection to mixed models that I will explain later this semester. The model m2 is fit using this approach. Compare the edf used by the two models and the estimated derivatives.__  
+
+The REML-estimated model allows for residual-based maximum likelihood estimation. The estimated derivative for the REML model is not as wiggly as the one that usess maximum likelihood. Based on this, it is likely that the ML model is overfitting the data. 
+
+The estimated degrees of freedom are 10.61 for the REML model and 35.87 for the ML smoother, indicating that the ML model is using more  complexity to get to its estimates. The REML estimate is more parsimonious in that it needs fewer knots to estimate an average and thus will be less wiggly than the ML version. 
 
 ```{r warning=F,message=F}
 source("http://www.math.montana.edu/courses/s217/documents/derivFun.R.txt")
@@ -83,14 +88,18 @@ summary(m2)
 ```
 
 
-6) __In this problem you will explore the role of the smoothing parameter in GAMs. I do not recommend this option, but it is possible to fix the smoothing parameter and explore the impact on the estimated smooth curves. Describe the impacts of increasing the smoothing parameter and what the optimal amount of smoothing was based on the GCV measure.__
+6) __In this problem, you will explore the role of the smoothing parameter in GAMs. I do not recommend this option, but it is possible to fix the smoothing parameter and explore the impact on the estimated smooth curves. Describe the impacts of increasing the smoothing parameter and what the optimal amount of smoothing was based on the GCV measure.__
 
+I didn't really like the way that the GCV plot looked in base R, but thankfully GGplot allows for faceting. While not a perfect solution (because it distorts the x-axis), the plot below shows the behavior of the GCV measures near where it is minimized. 
+
+Increasing the smoothing parameter has an initial effect of lowering the GCV measure; however, after it is minimized at $x = 0.0002$ and increases rather rapidly from there.  
 
 ```{r warning=F,message=F}
 plot(gtemp$Year,gtemp$Annual,xlab="Year",ylab="Temperature Anomaly (deg C)")
 lines(gtemp$Year,gtemp$Annual,col="red")
 abline(h=0,col="grey",lwd=2)
 
+#plots the fitted values
 sps1<-c(seq(from=.000000001,to=.01,length.out=50))
 gcvs<-numeric(0)
 for (j in (1:length(sps1))){
@@ -109,11 +118,12 @@ for (j in (1:length(sps2))){
 }
 
 #Plot of (Smoothing Parameters) vs GCV scores
-df.sps <- data.frame(cbind(sps1,sps2))
-ggplot(df.sps, aes(x = c(sps1,sps2)) + geom_point() + geom_line() + theme_classic()
-
 plot(c(sps1,(sps2)),gcvs,type="l") 
 
+x <- data.frame(cbind(c(sps1,sps2),gcvs))
+x$bigsmall <- ifelse(x$V1 > 0.02,">0.02","<0.02")
+library(ggplot2)
+ggplot(x,aes(x = V1, y = gcvs)) + geom_point() + geom_line() + facet_grid(.~bigsmall,scales = "free_x")
 
 ```
 
