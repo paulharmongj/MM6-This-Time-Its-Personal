@@ -1,0 +1,119 @@
+---
+title: "HW 6"
+author: "Paul Harmon"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- __Due on Monday 10/16 at the end of the day.__
+
+- __You can work in groups of up to 2 as long as the person is not someone you worked with on the last homework.__ 
+
+- The following questions pertain to the post at http://ucfagls.wordpress.com/2011/06/12/additive-modelling-and-the-hadcrut3v-global-mean-temperature-series/
+
+- Read the post (ignore the comments) and then answer the following questions:
+
+1) __Describe the data set he is analyzing. What is the sample size, what does it represent, and what is the scale of the response variable?__
+
+The author is analyzing a climate data set called the Hadcrut Temperature Anomaly dataset. It measures temperature anomalies from 1950 to 2017, meaning that it measures the 
+
+The response variable refers to the difference between the mean monthly temperature over the span from 1961 to 1990 and the average monthly temperature in the given month/year. Looking at the plot, the temperature anomaly tends to be pretty small during the 1961 to 1990 period (as would be expected, given the construction of the response); further, it appears that the temperatures tended to be less during the roughly 100 years prior to that period and slightly higher in the period after 1990. 
+
+There are 12 observations per year, with the annual average being the response. Since there are 168 years in the dataset, the sample size ends up being just 168 since each year has only a single observation. With these data, they could have fit models with 12 anomaly observations per year (2016 total observations) but this would have been more sensitive to short-term monthly temperature trends than would the yearly-aggregated method they chose to use. 
+
+
+2) __What research question(s) is he trying to address in the analysis? What question does the derivative estimation and blue highlighting using "sizer" address?__
+
+The author is interested in assessing statistical evidence of whether or not global temperatures are rising. In particular, the author is interested in temperature trends - were there periods when the temperatures were clearly rising or falling? The derivative estimation and the blue highlighting get at this second question; the periods of time where there is strong evidence that the derivative of the trend differs from 0, the plot is highlighted either red (decreasing) or blue (increasing). Interestingly, no places are highlighted red, indicating that no period of time experience strong evidence for a decreasing temperature trend (at least globally), and two periods experienced strong statistical evidence of an increasing trend. 
+
+The author's methodology is interesting; however, he repeatedly refers to statistical 'significance' as his benchmark for determining whether something is out of the ordinary. In the plot, a 'significant' derivative is a period of time for which 0 lies outside a 99-percent confidence interval, indicating that, given the uncertainty in the trend estimates, only periods with fairly large deviations in slope from 0 are highlighted blue. 
+
+
+
+3) __What is the impact of accounting for autocorrelation on the estimated trend in his analysis?__
+
+The impact of accounting for autocorrelation in the estimated trend helps to keep the smoothing line from overfitting the data. By estimating a lag-1 autocorrelation structure, the fitted line is not pulled towards more extreme values at the bottom of valleys or tops of peaks; the uncorrelated-errors model ends up overfitting the data by getting pulled towards those extreme values. Also, it appears that the AR(1) structure seems to do better near the edges - it is not as affected by the extreme temperature values in 1850 or 2017 and seems more linear. 
+
+
+4) __The provided code will get you the updated global yearly temperature data set that goes to 2017 (you may want to save the data set as sometimes they update the data without too much warning). The code reads in the data set and makes a nice looking (but not as nice-looking as if it were made in GGplot ;) ) plot, adding the fitted values from a potential GAM to the plot. Discuss the estimate from the GAM that was fit. How is it similar to or different from his results? Make sure to address differences in options for fitting the GAMs, the shape of the estimated trend as well as evidence for the trend and complexity of the estimated curves.__
+
+
+
+
+```{r warning=F,message=F}
+URL <- url("https://crudata.uea.ac.uk/cru/data/temperature/HadCRUT4-gl.dat")
+gtemp <- read.table(URL, fill = TRUE)
+## Don't need the even rows
+gtemp <- gtemp[-seq(2, nrow(gtemp), by = 2), ]
+## set the Year as rownames
+rownames(gtemp) <- gtemp[,1]
+## Add colnames
+colnames(gtemp) <- c("Year", month.abb, "Annual")
+
+## Plot the data
+ylab <- expression(Temperature~Anomaly~(1961-1990)~degree*C)
+plot(Annual ~ Year, data = gtemp, type = "o",pch = 20, cex = 1.4,col = c("dodgerblue"), ylab = ylab, xaxt = "n")
+abline(h=0,col="orange2",lwd=3, lty = 2)
+title("Temperature Anomaly since 1850")
+axis(1,at = seq(1850,2010, by = 25))
+
+require(mgcv)
+m1<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,method="GCV.Cp")
+
+summary(m1)
+lines(gtemp$Year,fitted(m1),col="magenta",lwd=2)
+```
+
+5) __Using the following code, you can obtain the estimated first derivative of the time trend. Smoothing with GCV and autocorrelated data can lead to overly aggressive fits. One option (now the default in `gam`) is to use "REML" estimation to get the optimal amount of smoothness. This approach exploits a connection to mixed models that I will explain later this semester. The model m2 is fit using this approach. Compare the edf used by the two models and the estimated derivatives.__  
+
+```{r warning=F,message=F}
+source("http://www.math.montana.edu/courses/s217/documents/derivFun.R.txt")
+
+m1.d <- Deriv(m1, n = 400)
+par(mfrow=c(2,1))
+plot(m1.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),main="Derivative of time trend",xlab="Year")
+
+m2<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,method="REML")
+m2.d <- Deriv(m2, n = 400)
+plot(m2.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),main="Derivative of time trend",xlab="Year")
+summary(m2)
+```
+
+
+6) __In this problem you will explore the role of the smoothing parameter in GAMs. I do not recommend this option, but it is possible to fix the smoothing parameter and explore the impact on the estimated smooth curves. Describe the impacts of increasing the smoothing parameter and what the optimal amount of smoothing was based on the GCV measure.__
+
+
+```{r warning=F,message=F}
+plot(gtemp$Year,gtemp$Annual,xlab="Year",ylab="Temperature Anomaly (deg C)")
+lines(gtemp$Year,gtemp$Annual,col="red")
+abline(h=0,col="grey",lwd=2)
+
+sps1<-c(seq(from=.000000001,to=.01,length.out=50))
+gcvs<-numeric(0)
+for (j in (1:length(sps1))){
+  lam1<-sps1[j]
+  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),data=gtemp,method="GCV.Cp")
+  gcvs<-c(gcvs,m2$gcv.ubre)
+  lines(gtemp$Year,fitted(m2),col="skyblue")
+}
+
+sps2<-c(seq(from=.02,to=10,length.out=25))
+for (j in (1:length(sps2))){
+  lam1<-sps2[j]
+  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),data=gtemp,method="GCV.Cp")
+  gcvs<-c(gcvs,m2$gcv.ubre)
+  lines(gtemp$Year,fitted(m2),col="blue",lty=2)
+}
+
+#Plot of (Smoothing Parameters) vs GCV scores
+df.sps <- data.frame(cbind(sps1,sps2))
+ggplot(df.sps, aes(x = c(sps1,sps2)) + geom_point() + geom_line() + theme_classic()
+
+plot(c(sps1,(sps2)),gcvs,type="l") 
+
+
+```
+
