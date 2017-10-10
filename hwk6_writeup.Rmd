@@ -90,6 +90,8 @@ summary(m2)
 
 6) __In this problem, you will explore the role of the smoothing parameter in GAMs. I do not recommend this option, but it is possible to fix the smoothing parameter and explore the impact on the estimated smooth curves. Describe the impacts of increasing the smoothing parameter and what the optimal amount of smoothing was based on the GCV measure.__
 
+There are several plots below. The first one shows the fitted values from the two GAM fits. The GAMs with the smaller set of smoothing parameters tend to start with no smoothing - basically the line fits the points - and then tends to add in minor additional smoothing from there. The black line shows the line with no smoothing and the light blue lines show the smoother estimates. Then, for larger smoothing parameter values, the estimated model may be overly smooth - it looks almost like a quadratic fit. 
+
 I didn't really like the way that the GCV plot looked in base R, but thankfully GGplot allows for faceting. While not a perfect solution (because it distorts the x-axis), the plot below shows the behavior of the GCV measures near where it is minimized. 
 
 Increasing the smoothing parameter has an initial effect of lowering the GCV measure; however, after it is minimized at $x = 0.0002$ and increases rather rapidly from there.  
@@ -102,11 +104,12 @@ abline(h=0,col="grey",lwd=2)
 #plots the fitted values
 sps1<-c(seq(from=.000000001,to=.01,length.out=50))
 gcvs<-numeric(0)
+sick.colors <- c("black",rep("skyblue",length(sps1)-1))
 for (j in (1:length(sps1))){
   lam1<-sps1[j]
   m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),data=gtemp,method="GCV.Cp")
   gcvs<-c(gcvs,m2$gcv.ubre)
-  lines(gtemp$Year,fitted(m2),col="skyblue")
+  lines(gtemp$Year,fitted(m2),col=sick.colors[j])
 }
 
 sps2<-c(seq(from=.02,to=10,length.out=25))
