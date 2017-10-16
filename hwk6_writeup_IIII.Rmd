@@ -44,7 +44,7 @@ The impact of accounting for autocorrelation in the estimated trend helps to kee
 The GAM fit in this model only accounts for fixed effects. The GAM fit by the author was created using the function 'gamm' in R, which allows for modeling an AR(1) covariance structure - he did this for M2 and M3, but not for M1. 
 
 + K (the dimesionality) is set to a higher value (56) in our model than in the author's (M1 has K = 20), meaning that we are estimating a potentially more complex model than the author did. 
-
++ Our model explains more variation in the temperature anomalies than does the less complex model fit by the author, given by the .92 R-Squared vs .88 for the author
 + Our EDF is thus much higher (35.87) than the author's (11.85)
 
 In the author's model M1, the smooth term explained rougly 88 percent of the variation in the the response whereas our model explains roughly 91 percent (largely because we estimate higher-dimension smooth terms). 
@@ -65,13 +65,16 @@ colnames(gtemp) <- c("Year", month.abb, "Annual")
 ## Plot the data
 library(grDevices)
 ylab <- expression(Temperature~Anomaly~(1961-1990)~degree*C)
-plot(Annual ~ Year, data = gtemp, type = "o",pch = 20, cex = 1.4,col = rgb(30,144,255,alpha = 150,maxColorValue = 260), ylab = ylab, xaxt = "n")
+plot(Annual ~ Year, data = gtemp, type = "o",pch = 20, cex = 1.4,
+     col = rgb(30,144,255,alpha = 150,maxColorValue = 260), ylab = ylab, 
+     xaxt = "n")
 abline(h=0,col="orange2",lwd=3, lty = 2)
 title("Temperature Anomaly since 1850")
 axis(1,at = seq(1850,2010, by = 25))
 
 library(mgcv)
-m1<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,method="GCV.Cp")
+m1<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,
+        method="GCV.Cp")
 
 summary(m1)
 lines(gtemp$Year,fitted(m1),col="blue4",lwd=2)
@@ -88,11 +91,13 @@ source("http://www.math.montana.edu/courses/s217/documents/derivFun.R.txt")
 
 m1.d <- Deriv(m1, n = 400)
 par(mfrow=c(2,1))
-plot(m1.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),main="Derivative of time trend",xlab="Year")
+plot(m1.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),
+     main="Derivative of time trend",xlab="Year")
 
 m2<-gam(Annual~s(Year,k=round(168/3),bs="tp"),data=gtemp,method="REML")
 m2.d <- Deriv(m2, n = 400)
-plot(m2.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),main="Derivative of time trend",xlab="Year")
+plot(m2.d, sizer = TRUE, alpha = 0.01,ylab=expression(italic(hat(s)*"'"*(Year))),
+     main="Derivative of time trend",xlab="Year")
 summary(m2)
 ```
 
@@ -116,7 +121,8 @@ gcvs<-numeric(0)
 sick.colors <- c("black",rep("skyblue",length(sps1)-1))
 for (j in (1:length(sps1))){
   lam1<-sps1[j]
-  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),data=gtemp,method="GCV.Cp")
+  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),
+          data=gtemp,method="GCV.Cp")
   gcvs<-c(gcvs,m2$gcv.ubre)
   lines(gtemp$Year,fitted(m2),col=sick.colors[j])
 }
@@ -124,7 +130,8 @@ for (j in (1:length(sps1))){
 sps2<-c(seq(from=.02,to=10,length.out=25))
 for (j in (1:length(sps2))){
   lam1<-sps2[j]
-  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),data=gtemp,method="GCV.Cp")
+  m2<-gam(Annual~s(Year,k=round(168/2),bs="tp",sp=(lam1)),
+          data=gtemp,method="GCV.Cp")
   gcvs<-c(gcvs,m2$gcv.ubre)
   lines(gtemp$Year,fitted(m2),col="blue",lty=2)
 }
